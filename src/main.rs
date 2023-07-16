@@ -1,5 +1,5 @@
-use std::{fs::{self, File}, io::{BufWriter, Write, Read, BufReader, Cursor, BufRead}, path::Path, time::{self, Duration}, thread, ops::Index};
-use byteorder::{ReadBytesExt, BigEndian, LittleEndian};
+use std::{fs::{self, File}, io::{BufWriter, Write}, ops::Index};
+use byteorder::{ReadBytesExt, BigEndian};
 use roman::Roman;
 
 mod roman;
@@ -8,7 +8,7 @@ fn main() {
     let chars: &str = " abcdefghijklmnopqrstuvwxyz.!?";
 
     let mut text: String = String::new();
-    text = "du lyckades decrypta ris hemliga meddelande".to_owned();
+    text = "hej alfred".to_owned();
     //File::open("bible2022.txt").unwrap().read_to_string(&mut text).unwrap();
     
     let encoded_text = compress(chars, &text);
@@ -44,34 +44,34 @@ fn compress(chars: &str, text: &String) -> Vec<u8> {
         } else if current_number.len() > 0 {
             let number = current_number.join("").parse::<u32>().unwrap();
         
-            let roman = Roman::from(number).to_string();
-            
+            let roman = Roman::from(number).to_string().to_ascii_lowercase();
+
             for r in roman.chars() {
-                if let Some(abc) = push_char_to_stack(chars, r, value, &mut counter) {
+                if let Some(abc) = push_char_to_stack(chars, r, &mut value, &mut counter) {
                     writer.write(abc.to_be_bytes().as_slice()).unwrap();
                 }
             }
             current_number.clear();
         }
         */
-        
-        if let Some(abc) = push_char_to_stack(chars, t, &mut value, &mut counter) {
-            writer.write(abc.to_be_bytes().as_slice()).unwrap();
+        //println!("{}", counter);
+        if let Some(value) = push_char_to_stack(chars, t, &mut value, &mut counter) {
+            writer.write(value.to_be_bytes().as_slice()).unwrap();
         }
     }
-
     /*
     if current_number.len() > 0 {
         let number = current_number.join("").parse::<u32>().unwrap();
         
-        let roman = Roman::from(number).to_string();
-        
+        let roman = Roman::from(number).to_string().to_ascii_lowercase();
+
         for r in roman.chars() {
-            if let Some(abc) = push_char_to_stack(chars, r, value, &mut counter) {
+            if let Some(abc) = push_char_to_stack(chars, r, &mut value, &mut counter) {
                 writer.write(abc.to_be_bytes().as_slice()).unwrap();
             }
         }
-    }*/
+    }
+    */
 
     if counter > 0 {
         writer.write(value.to_be_bytes().as_slice()).unwrap();
@@ -87,8 +87,8 @@ fn push_char_to_stack(chars: &str, char: char, value: &mut u128, counter: &mut u
     }
     let index = index.unwrap();
 
-    *value = *value << 5;
-    *value |= (index & 31) as u128;
+    //println!("{}", counter);
+    *value |= (index as u128 & 31) << *counter * 5;
 
     *counter += 1;
     if *counter > 24 {
@@ -109,17 +109,21 @@ fn decompress(path: &str, chars: &str) -> String {
         //println!("yo");
         let next = buffer.read_u128::<BigEndian>();
         if next.is_err() {
+            //println!("{:#?}", next);
             break;
         }
         let next = next.unwrap();
 
-        let length = format!("{:b}", next).len() / 5;
+        //let length = 5;
+        //println!("{}", length);
 
-        for index in 0..length+1 {
-            let letter = (next >> (length - index) * 5) & 31;
+        let mut array = vec![];
+        for index in 0..25 {
+            let letter = (next >> (index * 5)) & 31;
             //println!("{}", letter);
-            string += index_to_char(chars, letter as usize);
+            array.push(index_to_char(chars, letter as usize));
         }
+        string += &array.join("");
 
         
 
