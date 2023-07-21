@@ -1,32 +1,29 @@
-use std::{fs::{self, File}, io::{BufWriter, Write, Read}, ops::Index, time::SystemTime, path::Path};
+use std::{fs::{self, File}, io::{BufWriter, Write, Read}, ops::Index, time::SystemTime, env};
 use byteorder::{ReadBytesExt, BigEndian};
 
 fn main() {
-    let output_dir = Path::new("output");
-    if !output_dir.exists() {
-        fs::create_dir(output_dir).unwrap();
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 2 {
+        panic!("no file, drag file or use cli");
     }
-    
 
     let start = SystemTime::now();
     let chars: &str = " abcdefghijklmnopqrstuvwxyz.!?12";
 
-    let mut text: String = String::new();
-    File::open("bible2022.txt").unwrap().read_to_string(&mut text).unwrap();
-    
+    let filename = args[1].clone();
+
+    //let mut text: String = String::new();
+    let mut buffer = vec![];
+    File::open(&filename).unwrap().read_to_end(&mut buffer).unwrap();
+    let text = String::from_utf8_lossy(&mut buffer).to_string();
+
+    println!("currently converting {} to smol", filename);
     let encoded_text = compress(chars, &text);
-
-    //println!("{:?}", encoded_text);
-    let checksum = crc32fast::hash(&encoded_text);
-    println!("currently writing {}", checksum);
-    println!("{}/{}.smol", output_dir.to_string_lossy(), checksum);
-    fs::write(output_dir.join(format!("{}.smol",checksum)), encoded_text).unwrap();
-    fs::write(output_dir.join(format!("{}.txt",checksum)), text.as_bytes()).unwrap();
-
-    //println!("yo");
-    //let text: String = 
-    decompress(&output_dir.join(format!("{}.smol",checksum)).to_string_lossy(), chars);
-    //println!("{}", text);
+    fs::write(format!("{}.smol",filename), encoded_text).unwrap();
+    
+    let un_smol = decompress(&format!("{}.smol",filename), chars);
+    fs::write(format!("{}.unsmol",filename), un_smol).unwrap();
 
     println!("done, took {:?}", start.elapsed().unwrap());
 }
@@ -52,9 +49,8 @@ fn compress(chars: &str, text: &String) -> Vec<u8> {
         }
 
         if char == '\n' {
-            for _ in 0..3 {
-                push_char_to_stack(chars, ' ', &mut value, &mut counter, &mut writer);
-            }
+            push_char_to_stack(chars, '2', &mut value, &mut counter, &mut writer);
+            push_char_to_stack(chars, ' ', &mut value, &mut counter, &mut writer);
             continue;
         }
 
@@ -117,7 +113,6 @@ fn decompress(path: &str, chars: &str) -> String {
     
     let mut is_number = false;
     let mut next_capitalized = false;
-    let mut space_counter = 0;
 
     let mut array: Vec<String> = vec![];
 
@@ -134,25 +129,6 @@ fn decompress(path: &str, chars: &str) -> String {
             let letter = (next >> (index * 5)) & 31;
 
             let char = index_to_char(chars, letter as usize);
-            
-            if char == " " && !is_number {
-                space_counter += 1;
-                
-                continue;
-            } else {
-                if space_counter >= 3 {
-                    while space_counter >= 3 {
-                        array.push("\n".to_owned());
-                        space_counter -= 3;
-                    }
-                    space_counter = 0;
-                }
-
-                if space_counter > 0 {
-                    array.push(" ".to_owned());
-                    space_counter = 0;
-                }
-            }
 
             if char == "1" {
                 is_number = !is_number;
@@ -169,7 +145,12 @@ fn decompress(path: &str, chars: &str) -> String {
                 array.push(index.to_string())
             } else {
                 if next_capitalized {
-                    array.push(char.to_ascii_uppercase().to_string());
+                    if char == " " {
+                        array.push("\n".to_owned());
+                    } else {
+                        array.push(char.to_ascii_uppercase().to_string());
+                    }
+
                     next_capitalized = false;
                 }else {
                     array.push(char.to_string());
