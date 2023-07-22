@@ -1,4 +1,7 @@
 /target
 /output
+
 *.bin
 *.txt
+*.smol
+*.unsmol
