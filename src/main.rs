@@ -21,18 +21,20 @@ fn main() {
 
     if arguments.len() == 0 {
         println!("without arguments, we enter raw mode");
-        println!("---- arguments ---");
-        println!("encode: -x");
-        println!("decode: -u");
-        println!("filename: -o");
-        println!("----");
         println!("running without -x or -u will attempt to auto detect");
+        println!("---- arguments ---");
+        println!("encode:   -x optional default: false");
+        println!("decode:   -u optional default: false");
+        println!("filename: -o optional default: <filename>");
+        println!("----");
         println!("usage: <filename> <args>");
         print!("input: ");
         stdout().flush().unwrap();
 
         let mut string = String::new();
         stdin().read_line(&mut string).unwrap();
+
+        println!();
 
         string = string.replace("\n", "");
         string = string.replace("\r", "");
@@ -80,7 +82,7 @@ fn main() {
     let total_time = SystemTime::now();
 
     if encode {
-        print!("starting encode: ");
+        print!("encode: ");
         stdout().flush().unwrap();
         let start_write = SystemTime::now();
 
@@ -105,7 +107,7 @@ fn main() {
     }
 
     if decode {
-        print!("starting decode: ");
+        print!("decode: ");
         stdout().flush().unwrap();
         let start_read = SystemTime::now();
 
@@ -128,7 +130,7 @@ fn main() {
         println!("file written to {:?}, took {:?}", output_file, start_read.elapsed().unwrap());
     }
 
-    println!("\neverything done. took {:?}\n", total_time.elapsed().unwrap());
+    println!("everything done. took {:?}\n", total_time.elapsed().unwrap());
 
     if pause_before_exit {
         println!("send anything to exit");
