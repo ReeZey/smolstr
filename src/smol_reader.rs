@@ -1,4 +1,4 @@
-use std::io::{Cursor, Read};
+use std::io::{Cursor, Read, Error};
 
 use byteorder::{ReadBytesExt, BigEndian};
 
@@ -38,14 +38,14 @@ impl SmolReader {
         self.string_builder += &index;
     }
 
-    pub fn decompress(&mut self, data: Vec<u8>) -> String {
+    pub fn decompress(&mut self, data: Vec<u8>) -> Result<String, Error> {
         self.reader = Cursor::new(data.clone());
 
         self.read_header();
 
         while data.len() > self.reader.position() as usize {
-            let next = self.reader.read_u128::<BigEndian>().unwrap();
-    
+            let next = self.reader.read_u128::<BigEndian>()?;
+
             //println!("{:?}", next);
     
             for index in 0..25 {
@@ -75,7 +75,7 @@ impl SmolReader {
             }
         }
 
-        return self.string_builder.clone();
+        return Ok(self.string_builder.clone());
     }
 }
 
